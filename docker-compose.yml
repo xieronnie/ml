@@ -1,0 +1,91 @@
+version: '2'
+
+services:
+  ml_db:
+    container_name: ml_db
+    image: ml_db:v4.0.0.0
+    volumes:
+      - dbdata:/var/lib/mysql
+      - mldata:/mnt
+    ports:
+      - "3306:3306"
+    restart: always
+
+  ml_mem:
+    container_name: ml_mem
+    image: ml_mem:v4.0.0.0
+    volumes:
+      - mldata:/mnt
+    ports:
+      - "11212:11212"
+    restart: always
+
+  ml_tm:
+    privileged: true
+    container_name: ml_tm
+    image: ml_core:v4.0.0.0
+    ports:
+      - "80:80"
+      - "123:123"
+      - "443:443"
+#port 8083 for OAuth
+      - "8083:8083"
+#port 8000 for java remote debug
+      - "8000:8000"
+#port 8084 for JMX
+      - "8084:8084"
+
+    depends_on:
+      - ml_db
+      - ml_mem
+    links:
+      - ml_db
+      - ml_mem
+    volumes:
+      - mldata:/mnt
+
+    restart: always
+
+# uncomment and enter extra host name and ip mappings below
+#
+#    extra_hosts:
+#      - "test.api.example.com:192.168.99.100"
+
+    command:
+      - start_tm
+
+  ml_cm:
+    container_name: ml_cm
+    image: ml_core:v4.0.0.0
+    ports:
+       - "5480:5480"
+#port 2200 for ssh
+       - "2200:22"
+    depends_on:
+      - ml_db
+      - ml_mem
+      - ml_tm
+    links:
+      - ml_db
+      - ml_mem
+      - ml_tm
+    volumes:
+      - mldata:/mnt
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - SSH_PORT=2200
+      
+    restart: always
+
+# uncomment and enter extra host name and ip mappings below
+#
+#    extra_hosts:
+#      - "test.api.example.com:192.168.99.100"
+ 
+
+volumes:
+  dbdata:
+    external: false
+
+  mldata:
+    external: false
